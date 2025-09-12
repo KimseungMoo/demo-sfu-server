@@ -1,0 +1,5 @@
+node_modules
+*.log
+/dist
+server/dist
+server/node_modules
