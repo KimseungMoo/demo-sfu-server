@@ -1,13 +1,13 @@
 # 데모 SFU 서버 요구사항 정의서 (Draft v0.1)
 
-> 본 문서는 강사 클라이언트(React) 개발을 위해 **로컬에서 실행 가능한 데모 SFU 서버**의 요구사항을 정의합니다. 서버는 프로젝트 내에 준비된 4개의 MP4 파일을 **실시간처럼** 스트리밍하여, 실제 카메라 연결 없이도 강사 클라이언트의 스트리밍·화면 전환·선택 화질 검증을 가능하게 합니다. (참고 아키텍처 및 품질 정책: Weldbeing T – MVP 시스템 아키텍처 Draft v0.3.2.)​
+> 본 문서는 강사 클라이언트(React) 개발을 위해 **로컬에서 실행 가능한 데모 SFU 서버**의 요구사항을 정의합니다. 서버는 프로젝트 내에 준비된 4개의 MP4 파일을 **실시간처럼** 스트리밍하여, 실제 카메라 연결 없이도 강사 클라이언트의 스트리밍·화면 전환·화질 검증을 가능하게 합니다. (참고 아키텍처 및 품질 정책: Weldbeing T – MVP 시스템 아키텍처 Draft v0.3.2.)​
 
 ---
 
 ## 1. 목적(Goal)
 
 * 강사 클라이언트 개발·테스트 시 **안드로이드 태블릿 앱/실장비/실서버 없이**도 실시간 스트리밍 UX를 검증.
-* **선택 스트림(주 화면)과 비선택 스트림(서브 화면)의 화질/프레임 정책**을 모사하여 실제 운영 환경과의 **품질 갭 최소화**.
+* **여러 스트림의 화질/프레임 정책**을 모사하여 실제 운영 환경과의 **품질 갭 최소화**.
 * **streamKey** 기반으로 **여러 스트림을 동시에 구분**하고, **연결/해제/전환** 시의 상태·지연·버퍼링 동작을 재현.
 
 ---
@@ -20,7 +20,6 @@
   * **MP4(H.264) 4개**를 **실시간 유사(fmp4 또는 WebRTC RTP 타이밍 기반)**로 다중 스트림 제공.
   * **WebSocket**(필수) + (옵션) **mediasoup**을 활용한 WebRTC 경로.
   * **streamKey**로 스트림 식별·구독·해제 지원.
-  * 선택/비선택 스트림의 **해상도·프레임레이트 다운스케일 시뮬레이션**.
   * **메타데이터 및 이벤트(마킹 연동 가능성) 인터페이스** 초안.
 
 * **제외**
@@ -43,7 +42,6 @@
 
 ## 4. 참조 아키텍처 준수 항목
 
-* **미디어 파이프라인 정책**: 선택 1080p30, 비선택 240~~360p 10~~15fps의 **품질 차등 전송**을 모사.
 * **원본 H.264/MP4 기반** 전송(가능하면 재인코딩 없이 **transmux** 중심), **마킹 이벤트와 동기화 가능한 타임스탬프** 유지(향후 연동).
 * **강사 UI** 기본 4분할 뷰 가정(썸네일+주 화면), **더블클릭 시 마킹**과 같은 상호작용 이벤트를 서버에 전달 가능한 메타 채널 제공(초안).
 
@@ -60,7 +58,7 @@
 [Demo SFU Server]
         ├── Stream Router (streamKey별 팬아웃)
         ├── Transmuxer (MP4 → fMP4 segments) / (Option) Encoder/Scaler
-        ├── QoS/Clock (실시간 타이밍, 선택/비선택 속성 반영)
+        ├── QoS/Clock (실시간 타이밍)
         └── Local Media Store (./media/*.mp4 4개)
 ```
 
@@ -86,6 +84,7 @@
 
   * `WELD-A1 → a1.mp4`, `WELD-A2 → a2.mp4`, `WELD-A3 → a3.mp4`, `WELD-A4 → a4.mp4`.
 * **FR-1.3** 서버 시작 시 **메타 스캔**(코덱/해상도/프레임레이트/길이)을 수행하고 catalog를 빌드한다.
+* **FR-1.4** `/catalog?count=n` 요청 시 기존 파일을 반복 사용하여 **n개의 논리 스트림**을 제공한다.
 
 ### FR-2. WebSocket 제어/데이터 채널
 
@@ -95,17 +94,12 @@
   * **구독**:
 
     ```json
-    { "type": "subscribe", "streamKey": "WELD-A1", "profile": "selected|unselected" }
+    { "type": "subscribe", "streamKey": "WELD-A1" }
     ```
   * **해제**:
 
     ```json
     { "type": "unsubscribe", "streamKey": "WELD-A1" }
-    ```
-  * **품질 전환(선택/비선택 전환)**:
-
-    ```json
-    { "type": "switch", "streamKey": "WELD-A1", "profile": "selected|unselected" }
     ```
   * **상태 조회**:
 
@@ -119,7 +113,7 @@
     ```
 * **FR-2.3** 서버 → 클라이언트 알림(JSON):
 
-  * **구독 승인**: `{"type":"subscribed","streamKey":"WELD-A1","profile":"selected"}`
+  * **구독 승인**: `{"type":"subscribed","streamKey":"WELD-A1"}`
   * **세그먼트 전송**(Mode A): 바이너리 프레임(헤더 + fMP4 payload). 헤더 예:
 
     ```json
@@ -137,12 +131,10 @@
   { "type":"control", "streamKey":"WELD-A1", "action":"pause|resume|seek|loopOn|loopOff" }
   ```
 
-### FR-4. 품질 프로파일(선택/비선택)
+### FR-4. 품질 프로파일
 
-* **FR-4.1** 선택 스트림: **1080p, 30fps** 목표. (원본이 낮으면 원본 유지)
-* **FR-4.2** 비선택 스트림: **240~~360p, 10~~15fps** 목표.
-* **FR-4.3** Mode A에서는 **다운스케일된 사전 파일** 또는 **서버 내 SW 트랜스코딩(옵션)**을 통해 구현.
-* **FR-4.4** Mode B(mediasoup)에서는 **Simulcast/SVC 또는 다중 파이프라인**으로 구현 시뮬레이션.​
+* **FR-4.1** 데모 서버는 모든 스트림을 **1080p, 30fps** 목표로 전송한다. (원본이 낮으면 원본 유지)
+* **FR-4.2** 향후 비선택 스트림 다운스케일 시뮬레이션은 별도 과제로 남긴다.
 
 ### FR-5. 세션/마킹(초안 연동)
 
@@ -159,7 +151,7 @@
 
 ## 7. 비기능 요구사항(Non-Functional Requirements)
 
-* **NFR-1 성능/지연**: 선택 스트림 **Glass-to-Glass 유사 지연 300~800ms**(로컬 기준) 목표.
+* **NFR-1 성능/지연**: 각 스트림 **Glass-to-Glass 유사 지연 300~800ms**(로컬 기준) 목표.
 * **NFR-2 동시성**: 단일 서버 프로세스에서 **동시 시청자(탭) 4~8개** 안정 유지.
 * **NFR-3 안정성**: 네트워크 순간 지연/패킷 드롭 시 **재전송/리커버리** 제공(Mode A: 세그먼트 재발행, Mode B: NACK/RTX).
 * **NFR-4 확장성**: 추후 실제 Ingest/SFU로 **구성 교체** 시 클라이언트 코드 변경 최소화(메시지·시그널링 인터페이스 유지).
@@ -173,7 +165,7 @@
 ### 8.1 HTTP
 
 * `GET /healthz`
-* `GET /catalog` →
+* `GET /catalog` (옵션 `?count=n`) →
 
   ```json
   {
@@ -184,6 +176,7 @@
   }
   ```
 
+  예: `/catalog?count=50` 요청 시 50개의 streamKey 목록을 반환한다.
 ### 8.2 WebSocket (시그널링/데이터)
 
 * **URL**: `ws://localhost:<PORT>/ws`
@@ -195,7 +188,6 @@
 
   * `E_STREAM_NOT_FOUND` (404) – 알 수 없는 streamKey
   * `E_ALREADY_SUBSCRIBED` (409) – 중복 구독
-  * `E_PROFILE_INVALID` (400) – 잘못된 profile
   * `E_INTERNAL` (500) – 내부 처리 오류
 
 ### 8.3 WebRTC (옵션)
@@ -257,12 +249,11 @@ type MarkEvent = {
 
 ## 10. 상태 머신 & 시나리오
 
-1. **클라이언트 초기화** → `GET /catalog` → streamKey 목록 표시
+1. **클라이언트 초기화** → `GET /catalog` 또는 `GET /catalog?count=n` → streamKey 목록 표시
 2. **구독 요청**(`subscribe`) → 서버 `subscribed` 응답 → **init segment** 수신 → **media segment** 주기 수신
-3. **선택 전환**(`switch`) → 서버가 **프로파일 변경** 반영(해상도/프레임 전환)
-4. **다중 구독**(최대 4개 동시) → 썸네일 3 + 주 화면 1
-5. **해제**(`unsubscribe`) → 송출 중지
-6. **연결 종료** → 서버 리소스 해제
+3. **다중 구독**(기본 4개, 확장 가능) → 여러 `<video>`에서 동시 재생
+4. **해제**(`unsubscribe`) → 송출 중지
+5. **연결 종료** → 서버 리소스 해제
 
 ---
 
@@ -274,8 +265,7 @@ type MarkEvent = {
   * `PORT=8080`
   * `MEDIA_DIR=./media`
   * `MODE=ws|webrtc|hybrid`
-  * `SELECTED_TARGET=1080x1920@30`
-  * `UNSELECTED_TARGET=360x640@12`
+  * `STREAM_COUNT=50` (옵션, 초기 스트림 수 확장)
 * **실행**:
 
   * 로컬: `pnpm dev` / Docker: `docker compose up -d`
@@ -287,9 +277,9 @@ type MarkEvent = {
 
 * **TC-1 카탈로그 로드**: 4개의 streamKey와 메타정보를 정상 획득.
 * **TC-2 구독/해제**: 각 streamKey 구독 시 **1초 내 init** + **3초 내 첫 media** 수신.
-* **TC-3 동시 4스트림**: 썸네일 3 + 주 화면 1 **합산 CPU <70%**, 드랍률 <1%.
-* **TC-4 전환 지연**: 비선택→선택 전환 시 **화질 전환 가시화 <500ms**, 프레임 안정화 <1500ms.
-* **TC-5 지연 목표**: 선택 스트림 End-to-End **<800ms**(로컬).
+* **TC-3 동시 4스트림**: 4개 스트림 동시 재생 시 **합산 CPU <70%**, 드랍률 <1%.
+* **TC-4 스트림 확장**: `/catalog?count=50` 요청 시 50개의 streamKey 반환 및 구독 가능.
+* **TC-5 지연 목표**: 각 스트림 End-to-End **<800ms**(로컬).
 * **TC-6 오류 처리**: 알 수 없는 streamKey → `E_STREAM_NOT_FOUND` 반환.
 * **TC-7 루프 재생**: 파일 종료 후 루프 모드에서 연속 재생 확인.
 * **TC-8 마킹(옵션)**: `mark` 메시지 수신 및 로그 기록.
@@ -326,19 +316,12 @@ type MarkEvent = {
 
 ```json
 // C → S
-{ "type":"subscribe","streamKey":"WELD-A1","profile":"selected" }
+{ "type":"subscribe","streamKey":"WELD-A1" }
 
 // S → C
-{ "type":"subscribed","streamKey":"WELD-A1","profile":"selected" }
+{ "type":"subscribed","streamKey":"WELD-A1" }
 // 이후: 바이너리 프레임( init → segment* )
 ```
-
-**선택 전환**
-
-```json
-{ "type":"switch","streamKey":"WELD-A1","profile":"unselected" }
-```
-
 **상태 조회**
 
 ```json
@@ -356,7 +339,7 @@ type MarkEvent = {
 ## 17. 부록 B — 클라이언트(React) 참고 구현 포인트
 
 * **Mode A(MSE)**: WebSocket 바이너리 수신 → init/segment 식별 → `MediaSource`/`SourceBuffer`에 순차 append → **back-pressure** 및 **timestampOffset** 관리.
-* **동시 스트림**: 썸네일용 별도 `<video>` + 주 화면 `<video>` 관리, 전환 시 **구독 프로파일 switch** 우선.
+* **동시 스트림**: 썸네일/주 화면 등 여러 `<video>` 요소에서 streamKey별 재생을 관리한다.
 * **에러 복구**: append 오류 시 **buffer clear & resync** 루틴 제공.
 * **마킹 이벤트**: 더블클릭 시 `mark` 메시지 송신(향후 실서버와 호환).
 

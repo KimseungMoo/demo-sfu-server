@@ -51,3 +51,19 @@ export async function buildCatalog(mediaDir: string): Promise<Catalog> {
   }
   return { streams };
 }
+
+export function expandCatalog(base: Catalog, count: number): Catalog {
+  const baseStreams = base.streams;
+  if (baseStreams.length === 0) return { streams: [] };
+  const expanded: CatalogStream[] = [];
+  for (let i = 0; i < count; i++) {
+    const baseStream = baseStreams[i % baseStreams.length];
+    const copyIndex = Math.floor(i / baseStreams.length);
+    const streamKey =
+      copyIndex === 0
+        ? baseStream.streamKey
+        : `${baseStream.streamKey}_${copyIndex}`;
+    expanded.push({ ...baseStream, streamKey });
+  }
+  return { streams: expanded };
+}

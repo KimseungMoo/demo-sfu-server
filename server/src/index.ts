@@ -2,25 +2,37 @@ import express from 'express';
 import http from 'http';
 import path from 'path';
 import { WebSocketServer } from 'ws';
-import { buildCatalog } from './catalog.js';
+import { buildCatalog, expandCatalog } from './catalog.js';
 import { Catalog } from './types.js';
 
 const PORT = Number(process.env.PORT ?? 8080);
 const MEDIA_DIR = process.env.MEDIA_DIR || path.resolve(process.cwd(), 'media');
+const STREAM_COUNT = Number(process.env.STREAM_COUNT);
 
+let baseCatalog: Catalog = { streams: [] };
 let catalog: Catalog = { streams: [] };
 
 async function start() {
-  catalog = await buildCatalog(MEDIA_DIR).catch((err) => {
+  baseCatalog = await buildCatalog(MEDIA_DIR).catch((err) => {
     console.warn('Failed to build catalog:', err);
     return { streams: [] };
   });
+  catalog = expandCatalog(
+    baseCatalog,
+    STREAM_COUNT && STREAM_COUNT > 0
+      ? STREAM_COUNT
+      : baseCatalog.streams.length,
+  );
 
   const app = express();
   app.get('/healthz', (_req, res) => {
     res.json({ status: 'ok', uptime: process.uptime() });
   });
-  app.get('/catalog', (_req, res) => {
+  app.get('/catalog', (req, res) => {
+    const count = Number(req.query.count);
+    if (!Number.isNaN(count) && count > 0) {
+      catalog = expandCatalog(baseCatalog, count);
+    }
     res.json(catalog);
   });
 
@@ -83,7 +95,6 @@ function handleMessage(ws: WS, msg: any) {
         JSON.stringify({
           type: 'subscribed',
           streamKey: msg.streamKey,
-          profile: msg.profile,
         })
       );
       // TODO: implement media segment streaming
@@ -101,17 +112,6 @@ function handleMessage(ws: WS, msg: any) {
         JSON.stringify({
           type: 'status',
           streams: Array.from(session.subscriptions.values()),
-        })
-      );
-      break;
-    }
-    case 'switch': {
-      // Profile switch is acknowledged only
-      ws.send(
-        JSON.stringify({
-          type: 'switched',
-          streamKey: msg.streamKey,
-          profile: msg.profile,
         })
       );
       break;
