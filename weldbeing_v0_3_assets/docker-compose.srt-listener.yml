@@ -1,0 +1,23 @@
+version: "3.9"
+services:
+  sls:
+    image: ghcr.io/ossrs/srs:4
+    command: /usr/local/srs/trunk/objs/srs -c /srs.conf
+    ports:
+      - "8080:8080"
+      - "10080:10080"
+      - "1935:1935"
+      - "10085:10085/udp"
+    volumes:
+      - ./srs.conf:/srs.conf:ro
+
+  recorder:
+    image: jrottenberg/ffmpeg:6.0-ubuntu
+    depends_on:
+      - sls
+    volumes:
+      - ./recordings:/recordings
+      - ./scripts:/scripts:ro
+    environment:
+      - RECORDINGS_ROOT=/recordings
+    entrypoint: ["/bin/bash", "/scripts/record_srt.sh"]

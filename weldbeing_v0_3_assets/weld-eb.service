@@ -1,0 +1,16 @@
+[Unit]
+Description=Weldbeing Edge Bridge (EB) - mediamtx RTSP proxy
+After=network-online.target docker.service
+Wants=network-online.target docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/weld-eb
+ExecStart=/usr/bin/docker compose -f docker-compose.eb.yml up -d
+ExecStop=/usr/bin/docker compose -f docker-compose.eb.yml down
+TimeoutStartSec=0
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
