@@ -1,0 +1,8 @@
+streams:
+  camera: rtsp://192.168.254.1/live
+
+webrtc:
+  listen: ":8555"
+
+api:
+  listen: ":1984"
