@@ -33,6 +33,8 @@
 ## 3. 용어 정의
 
 * **streamKey**: 각 MP4 파일/스트림을 고유 식별하는 문자열(예: "WELD-A1", "WELD-A2" …). WebSocket 및 (옵션) WebRTC 시그널링에 사용.
+* **선택(Selected) 스트림**: 강사가 주요 시청 대상으로 선택한 스트림(1080p30 목표).
+* **비선택(Unselected) 스트림**: 강사가 썸네일/서브뷰로 보는 스트림(240~~360p, 10~~15fps 목표).
 * **실시간 유사(Realtime-like)**: 정해진 프레임 타임라인에 맞춰 연속 세그먼트/패킷 송출, 지연/버퍼 제어 포함.
 * **데모 SFU**: 단일 서버 프로세스에서 다중 반출을 중계하는 구성. (실서비스 단계의 실제 SFU와 **동작·인터페이스 호환성**을 우선 고려)
 
@@ -175,7 +177,6 @@
   ```
 
   예: `/catalog?count=50` 요청 시 50개의 streamKey 목록을 반환한다.
-
 ### 8.2 WebSocket (시그널링/데이터)
 
 * **URL**: `ws://localhost:<PORT>/ws`
@@ -321,7 +322,6 @@ type MarkEvent = {
 { "type":"subscribed","streamKey":"WELD-A1" }
 // 이후: 바이너리 프레임( init → segment* )
 ```
-
 **상태 조회**
 
 ```json
