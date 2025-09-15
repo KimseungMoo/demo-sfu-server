@@ -1,7 +1,7 @@
+import ffprobeStatic from 'ffprobe-static';
+import ffmpeg from 'fluent-ffmpeg';
 import fs from 'fs';
 import path from 'path';
-import ffmpeg from 'fluent-ffmpeg';
-import ffprobeStatic from 'ffprobe-static';
 import { Catalog, CatalogStream } from './types.js';
 
 ffmpeg.setFfprobePath(ffprobeStatic.path);

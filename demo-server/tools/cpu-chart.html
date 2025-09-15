@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>스트림 개수별 CPU 사용량 비교</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            font-weight: 300;
+        }
+        .header p {
+            margin: 10px 0 0 0;
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        .chart-container {
+            padding: 40px;
+            position: relative;
+            height: 600px;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            padding: 40px;
+            background: #f8f9fa;
+        }
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            text-align: center;
+            border-left: 4px solid #4facfe;
+        }
+        .stat-card h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+            font-size: 1.1em;
+        }
+        .stat-card .value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #4facfe;
+            margin: 10px 0;
+        }
+        .stat-card .change {
+            font-size: 0.9em;
+            color: #666;
+        }
+        .analysis {
+            padding: 40px;
+            background: #fff;
+        }
+        .analysis h2 {
+            color: #333;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #4facfe;
+            padding-bottom: 10px;
+        }
+        .analysis ul {
+            line-height: 1.8;
+            color: #555;
+        }
+        .analysis li {
+            margin-bottom: 10px;
+        }
+        .highlight {
+            background: linear-gradient(120deg, #a8edea 0%, #fed6e3 100%);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #ff6b6b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 스트림 개수별 CPU 사용량 분석</h1>
+            <p>WebSocket 연결 수에 따른 Node.js 서버 성능 비교</p>
+        </div>
+        
+        <div class="chart-container">
+            <canvas id="cpuChart"></canvas>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h3>1개 스트림</h3>
+                <div class="value">50.4%</div>
+                <div class="change">초기: 20.4% → 최종: 50.4%</div>
+            </div>
+            <div class="stat-card">
+                <h3>2개 스트림</h3>
+                <div class="value">76.3%</div>
+                <div class="change">초기: 37.8% → 최종: 76.3%</div>
+            </div>
+            <div class="stat-card">
+                <h3>3개 스트림</h3>
+                <div class="value">98.7%</div>
+                <div class="change">초기: 54.8% → 최종: 98.7%</div>
+            </div>
+            <div class="stat-card">
+                <h3>4개 스트림</h3>
+                <div class="value">99.9%</div>
+                <div class="change">초기: 38.5% → 최종: 99.9%</div>
+            </div>
+        </div>
+        
+        <div class="analysis">
+            <h2>🔍 분석 결과</h2>
+            <ul>
+                <li><strong>선형적 증가 패턴:</strong> 스트림 개수가 늘어날수록 CPU 사용량이 선형적으로 증가</li>
+                <li><strong>시스템 한계:</strong> 3개 이상 스트림에서 CPU 사용량이 98% 이상으로 시스템 한계 도달</li>
+                <li><strong>성능 저하:</strong> 스트림이 늘어날수록 FPS와 처리 속도가 크게 저하</li>
+                <li><strong>최적 스트림 수:</strong> 현재 시스템에서는 1-2개 스트림이 최적</li>
+            </ul>
+            
+            <div class="highlight">
+                <h3>💡 권장사항</h3>
+                <p>현재 시스템 환경에서는 <strong>최대 2개 스트림</strong>까지 안정적으로 처리 가능하며, 
+                3개 이상의 스트림은 시스템 리소스 부족으로 인한 성능 저하가 발생합니다.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const ctx = document.getElementById('cpuChart').getContext('2d');
+        
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['1개 스트림', '2개 스트림', '3개 스트림', '4개 스트림'],
+                datasets: [
+                    {
+                        label: '초기 CPU 사용량 (%)',
+                        data: [20.4, 37.8, 54.8, 38.5],
+                        borderColor: '#4facfe',
+                        backgroundColor: 'rgba(79, 172, 254, 0.1)',
+                        borderWidth: 3,
+                        pointBackgroundColor: '#4facfe',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointRadius: 8,
+                        tension: 0.4
+                    },
+                    {
+                        label: '3초 후 CPU 사용량 (%)',
+                        data: [55.3, 62.7, 97.0, 97.1],
+                        borderColor: '#00f2fe',
+                        backgroundColor: 'rgba(0, 242, 254, 0.1)',
+                        borderWidth: 3,
+                        pointBackgroundColor: '#00f2fe',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                        pointRadius: 8,
+                        tension: 0.4
+                    },
+                    {
+                        label: '최종 CPU 사용량 (%)',
+                        data: [50.4, 76.3, 98.7, 99.9],
+                        borderColor: '#ff6b6b',
+                        backgroundColor: 'rgba(255, 107, 107, 0.1)',
+                        borderWidth: 4,
+                        pointBackgroundColor: '#ff6b6b',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 3,
+                        pointRadius: 10,
+                        tension: 0.4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: '스트림 개수별 CPU 사용량 변화',
+                        font: {
+                            size: 20,
+                            weight: 'bold'
+                        },
+                        color: '#333'
+                    },
+                    legend: {
+                        position: 'top',
+                        labels: {
+                            usePointStyle: true,
+                            padding: 20,
+                            font: {
+                                size: 14
+                            }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0,0,0,0.8)',
+                        titleColor: '#fff',
+                        bodyColor: '#fff',
+                        borderColor: '#4facfe',
+                        borderWidth: 1,
+                        cornerRadius: 8,
+                        displayColors: true,
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ' + context.parsed.y + '%';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: '스트림 개수',
+                            font: {
+                                size: 16,
+                                weight: 'bold'
+                            },
+                            color: '#333'
+                        },
+                        grid: {
+                            color: 'rgba(0,0,0,0.1)'
+                        },
+                        ticks: {
+                            font: {
+                                size: 14
+                            },
+                            color: '#666'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'CPU 사용량 (%)',
+                            font: {
+                                size: 16,
+                                weight: 'bold'
+                            },
+                            color: '#333'
+                        },
+                        min: 0,
+                        max: 100,
+                        grid: {
+                            color: 'rgba(0,0,0,0.1)'
+                        },
+                        ticks: {
+                            font: {
+                                size: 14
+                            },
+                            color: '#666',
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        }
+                    }
+                },
+                elements: {
+                    point: {
+                        hoverRadius: 12
+                    }
+                },
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                }
+            }
+        });
+        
+        // 차트 애니메이션 효과
+        chart.options.animation = {
+            duration: 2000,
+            easing: 'easeInOutQuart'
+        };
+        
+        chart.update();
+    </script>
+</body>
+</html>
