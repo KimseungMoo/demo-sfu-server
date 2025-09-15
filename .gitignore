@@ -6,3 +6,5 @@ package-lock.json
 demo-server/dist
 demo-server/node_modules
 demo-server/media
+server/node_modules
+server/video
