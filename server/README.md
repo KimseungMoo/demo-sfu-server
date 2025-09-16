@@ -13,7 +13,7 @@ Request body:
 ```
 Response:
 ```
-{ "status": "ready", "rtpUrl": "rtp://localhost:5000" }
+{ "status": "ready", "rtpUrl": "rtp://<ANNOUNCE_IP>:5000" }
 ```
 
 ### POST /api/session/stop
@@ -35,5 +35,11 @@ npm install
 npm run dev
 ```
 
+Environment variables:
+
+- `RTP_ANNOUNCE_IP` – IP address embedded in `rtpUrl` returned to clients
+- `VIDEO_ROOT` – override the base directory for recordings (defaults to the
+  system root `/video` path)
+
 By default the server listens on port `8080` and stores recordings under
-`./video/{trainingId}/{sessionId}/{studentId}/{streamKey}.mp4`.
+`/video/{trainingId}/{sessionId}/{studentId}/{streamKey}.mp4`.

@@ -5,8 +5,10 @@ import fs from 'fs';
 import path from 'path';
 
 const PORT = process.env.PORT || 8080;
-const VIDEO_ROOT = process.env.VIDEO_ROOT || path.join(process.cwd(), 'video');
+const DEFAULT_VIDEO_ROOT = path.join(path.parse(process.cwd()).root, 'video');
+const VIDEO_ROOT = process.env.VIDEO_ROOT || DEFAULT_VIDEO_ROOT;
 const RTP_BASE_PORT = parseInt(process.env.RTP_BASE_PORT || '5000', 10);
+const RTP_ANNOUNCE_IP = process.env.RTP_ANNOUNCE_IP || 'localhost';
 
 const app = express();
 app.use(express.json());
@@ -54,7 +56,7 @@ app.post('/api/session/start', (req, res) => {
 
   sessions.set(streamKey, { ffmpeg, port, filePath });
 
-  res.json({ status: 'ready', rtpUrl: `rtp://localhost:${port}` });
+  res.json({ status: 'ready', rtpUrl: `rtp://${RTP_ANNOUNCE_IP}:${port}` });
 });
 
 app.post('/api/session/stop', (req, res) => {

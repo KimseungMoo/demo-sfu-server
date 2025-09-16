@@ -22,8 +22,14 @@ npm run dev
 ```
 
 By default the server stores recordings under
-`./video/{trainingId}/{sessionId}/{studentId}/{streamKey}.mp4` and listens on
-port `8080`.
+`/video/{trainingId}/{sessionId}/{studentId}/{streamKey}.mp4` (configurable via
+the `VIDEO_ROOT` environment variable) and listens on port `8080`.
+
+## macOS RTP Test Client
+
+The [`client/`](client) directory contains a helper script for macOS that uses
+`ffmpeg` to stream all attached cameras as H.264 over RTP to the server without
+re-encoding. See [client/README.md](client/README.md) for usage.
 
 Example WebSocket subscribe message:
 
