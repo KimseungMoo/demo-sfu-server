@@ -6,11 +6,12 @@ See [DEMO_SFU_SERVER_REQUIREMENTS.md](DEMO_SFU_SERVER_REQUIREMENTS.md) for the d
 
 ## Server
 
-The SFU demo server implementation lives in the [`server/`](server) directory. It exposes:
+The SFU server implementation lives in the [`server/`](server) directory. It exposes:
 
+- `POST /api/session/start` – allocate an RTP port and begin recording the incoming H.264 stream to MP4
+- `POST /api/session/stop` – stop recording and close the session
 - `GET /healthz` – basic health check
-- `GET /catalog` – media catalog generated from `MEDIA_DIR` (use `?count=n` to duplicate streams)
-- `ws://localhost:<PORT>/ws` – WebSocket API for stream control
+- `ws://localhost:<PORT>/ws` – WebSocket API for stream control (`subscribe`/`unsubscribe`)
 
 To run the server locally:
 
@@ -20,13 +21,18 @@ npm install
 npm run dev
 ```
 
-By default the server looks for MP4 files under `../media` and listens on port `8080`. Set `STREAM_COUNT` to expand the initial catalog.
+By default the server stores recordings under
+`/video/{trainingId}/{sessionId}/{studentId}/{streamKey}.mp4` (configurable via
+the `VIDEO_ROOT` environment variable) and listens on port `8080`.
 
-All streams are served in the same quality profile; there is no separate unselected stream.
+## macOS RTP Test Client
+
+The [`client/`](client) directory contains a helper script for macOS that uses
+`ffmpeg` to stream all attached cameras as H.264 over RTP to the server without
+re-encoding. See [client/README.md](client/README.md) for usage.
 
 Example WebSocket subscribe message:
 
 ```json
-{ "type": "subscribe", "streamKey": "WELD-A1" }
+{ "type": "subscribe", "streamKey": "cam01" }
 ```
-
